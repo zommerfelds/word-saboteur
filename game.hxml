@@ -1,0 +1,15 @@
+-cp src/hx
+-main game.App
+
+# Dead code elimination to reduce code size
+#--dce full
+
+# -lib haxe-firebase:1.0.3
+-lib js-firebase:0.2.0
+# -lib heaps:1.9.0
+
+# -D resourcesPath=./res/heaps
+
+--macro nullSafety("game")
+
+-js build/game.js

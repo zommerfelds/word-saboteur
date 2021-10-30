@@ -1,2 +1,25 @@
 # word-saboteur
 A simple multiplayer game
+
+## Development
+
+Open in [Gitpod](gitpod.io/#https://github.com/zommerfelds/word-saboteur).
+
+Setup environment
+```
+sudo apt-get install haxe -y
+mkdir ~/haxelib && haxelib setup ~/haxelib
+haxelib install game.hxml
+```
+
+1. Install Haxe plugin
+
+Serve the app:
+```
+python -m http.server
+```
+
+Compile & watch:
+```
+watch -x bash -c 'haxe game.hxml |& tail -n4'
+```

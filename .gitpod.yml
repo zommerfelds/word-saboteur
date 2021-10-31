@@ -1,0 +1,8 @@
+tasks:
+  - name: Install dependencies
+    init: |
+      sudo apt-get install haxe -y
+      mkdir ~/haxelib && haxelib setup ~/haxelib
+      yes | haxelib install game.hxml
+      haxe game.hxml
+    command: python -m http.server

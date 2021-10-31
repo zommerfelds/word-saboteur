@@ -3,7 +3,7 @@ A simple multiplayer game
 
 ## Development
 
-Open in [Gitpod](gitpod.io/#https://github.com/zommerfelds/word-saboteur).
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/zommerfelds/word-saboteur)
 
 Setup environment
 ```

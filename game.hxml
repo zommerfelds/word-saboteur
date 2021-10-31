@@ -12,4 +12,4 @@
 
 --macro nullSafety("game")
 
--js build/game.js
+-js public/build/game.js

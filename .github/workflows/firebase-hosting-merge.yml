@@ -14,7 +14,7 @@ jobs:
       - run: |
           sudo apt-get install haxe -y
           mkdir ~/haxelib && haxelib setup ~/haxelib
-          haxelib install game.hxml
+          yes | haxelib install game.hxml
           haxe game.hxml
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:

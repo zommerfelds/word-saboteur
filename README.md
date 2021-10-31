@@ -10,6 +10,7 @@ Setup environment
 sudo apt-get install haxe -y
 mkdir ~/haxelib && haxelib setup ~/haxelib
 haxelib install game.hxml
+npm install -g firebase-tools
 ```
 
 1. Install Haxe plugin

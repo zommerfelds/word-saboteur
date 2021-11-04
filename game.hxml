@@ -8,6 +8,8 @@
 # -lib js-firebase:0.2.0
 -lib js-firebase:git:https://github.com/okawa-h/js-firebase-extern.git
 
+-lib uuid:2.4.0
+
 # -lib heaps:1.9.0
 
 # -D resourcesPath=./res/heaps

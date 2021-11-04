@@ -2,10 +2,12 @@
 -main game.App
 
 # Dead code elimination to reduce code size
-#--dce full
+--dce full
 
-# -lib haxe-firebase:1.0.3
--lib js-firebase:0.2.0
+# We made a fix (https://github.com/okawa-h/js-firebase-extern/issues/1) which is not published yet.
+# -lib js-firebase:0.2.0
+-lib js-firebase:git:https://github.com/okawa-h/js-firebase-extern.git
+
 # -lib heaps:1.9.0
 
 # -D resourcesPath=./res/heaps

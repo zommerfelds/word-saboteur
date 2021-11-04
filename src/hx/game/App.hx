@@ -4,6 +4,8 @@ import js.html.URLSearchParams;
 import firebase.Firebase;
 import js.Browser;
 
+using StringTools;
+
 @:expose
 class App {
 	static function setText(str) {
@@ -22,6 +24,17 @@ class App {
 			trace("created game: " + doc.id);
 			Browser.location.href = "?game=" + doc.id;
 		});
+	}
+
+	static function enterName() {
+		final input:js.html.InputElement = cast Browser.document.getElementById("player-name");
+		final name = input.value.trim();
+		if (name == "") {
+			// TODO: show warning message.
+			return;
+		}
+		Browser.getLocalStorage().setItem("playerName", name);
+		Browser.location.reload(/* forceget= */ false);
 	}
 
 	static var app:Null<firebase.app.App> = null;
@@ -58,13 +71,16 @@ class App {
 		final urlParams = new URLSearchParams(Browser.window.location.search);
 		final gameUrlParam = urlParams.get("game");
 
+		final playerName = Browser.getLocalStorage().getItem("playerName");
+
+		Browser.document.getElementById("state-loading").style.display = "none";
 		if (gameUrlParam == null) {
-			Browser.document.getElementById("loading").style.display = "none";
-			Browser.document.getElementById("mainmenu").style.display = "block";
+			Browser.document.getElementById("state-mainmenu").style.display = "block";
+		} else if (playerName == null) {
+			Browser.document.getElementById("state-join").style.display = "block";
 		} else {
-			Browser.document.getElementById("loading").style.display = "none";
-			Browser.document.getElementById("game").style.display = "block";
-			setText("You joined game " + gameUrlParam);
+			Browser.document.getElementById("state-game").style.display = "block";
+			setText('Welcome $playerName! Game ID: $gameUrlParam');
 		}
 	}
 }

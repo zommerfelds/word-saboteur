@@ -7,13 +7,17 @@
     </head>
     <body>
         <h1>Word saboteur</h1>
-        <div id="mainmenu" style="display: none;">
+        <div id="state-mainmenu" style="display: none;">
             <button onclick="game.App.createGame()">Create new game</button>
         </div>
-        <div id="game" style="display: none;">
+        <div id="state-join" style="display: none;">
+            Enter your name: <input type="text" id="player-name" value="">
+            <button onclick="game.App.enterName()">Enter</button>
+        </div>
+        <div id="state-game" style="display: none;">
             <p id="my-text"></p>
         </div>
-        <div id="loading">
+        <div id="state-loading">
             <p>Loading...</p>
         </div>        
 

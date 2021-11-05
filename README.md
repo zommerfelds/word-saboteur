@@ -1,7 +1,7 @@
 # word-saboteur
 A simple multiplayer game
 
->>> Access the live version here: https://word-saboteur.firebaseapp.com/ <<<
+➡️➡️➡️ Access the live version here: https://word-saboteur.firebaseapp.com/ ⬅️⬅️⬅️
 
 ## Development
 

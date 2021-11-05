@@ -6,7 +6,7 @@
         <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     </head>
     <body>
-        <h1>Word saboteur</h1>
+        <a href="?"><h1>Word saboteur</h1></a>
         <div id="state-mainmenu" style="display: none;">
             <button onclick="game.App.createGame()">Create new game</button>
         </div>
@@ -14,8 +14,27 @@
             Enter your name: <input type="text" id="player-name" value="">
             <button onclick="game.App.enterName()">Enter</button>
         </div>
-        <div id="state-game" style="display: none;">
+        <div id="state-generictext" style="display: none;">
             <p id="my-text"></p>
+        </div>
+        <div id="state-waitingroom" style="display: none;">
+            <p id="text-waitingroom"></p>
+            <button onclick="game.App.startGame()">Start game</button>
+        </div>
+        <div id="state-saboteurenterword" style="display: none;">
+            <p id="text-saboteur"></p>
+            <input type="text" id="input-saboteur" value="">
+            <button onclick="game.App.enterSaboteurWord()">Enter</button>
+        </div>
+        <div id="state-guesswords" style="display: none;">
+            <p id="text-guess"></p>
+            <button onclick="game.App.guessWord(0)" id="button-guess-0"></button>
+            <button onclick="game.App.guessWord(1)" id="button-guess-1"></button>
+            <button onclick="game.App.guessWord(2)" id="button-guess-2"></button>
+        </div>
+        <div id="state-guessedwords" style="display: none;">
+            <p id="text-guessed"></p>
+            <button onclick="game.App.nextRound()">Next round!</button>
         </div>
         <div id="state-loading">
             <p>Loading...</p>

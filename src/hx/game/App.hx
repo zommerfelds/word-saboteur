@@ -125,7 +125,7 @@ class App {
 			}
 		}
 		update.set(GameDataFields.clueGiverPlayerId, otherPlayerId);
-		update.set(GameDataFields.targetWords, ["word1", "word2"]);
+		update.set(GameDataFields.targetWords, [Words.getRandomWord(), Words.getRandomWord()]);
 		update.set(GameDataFields.sabotageWord, null);
 		db.collection("games").doc(gameUrlParam).update(cast update);
 	}

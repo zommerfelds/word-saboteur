@@ -10,7 +10,7 @@
 
 -lib uuid:2.4.0
 
-# -lib heaps:1.9.0
+-lib heaps:1.9.1
 
 # -D resourcesPath=./res/heaps
 

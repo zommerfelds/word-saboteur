@@ -40,13 +40,14 @@ typedef GameData = {
 	saboteurPlayerId:Null<String>,
 	clueGiverPlayerId:Null<String>,
 	targetWords:Array<String>,
-	sabotageWord:Null<String>, // TODO: this will allow cheating by inspecting the network data! Is it worth it to use some fancy private/public key approach? Or rather have private data on server?
+	sabotageWord:Null<String>,
+	// TODO: this will allow cheating by inspecting the network data! Is it worth it to use some fancy private/public key approach? Or rather have private data on server?
 	sabotageWordIndex:Int,
 	guessedWordIndexes:Array<Int>,
 };
 
 @:expose
-class App {
+class App extends hxd.App {
 	static function setText(str, id = "my-text") {
 		Browser.document.getElementById(id).innerHTML = str;
 	}
@@ -60,48 +61,6 @@ class App {
 			map.set(n.key, n.value);
 		}
 		return map;
-	}
-
-	static function createGame() {
-		assertNotNull(db);
-
-		final data:GameData = {
-			version: 1,
-			players: {},
-			state: WAITING_ROOM,
-			clueGiverPlayerId: null,
-			saboteurPlayerId: null,
-			targetWords: [],
-			sabotageWord: null,
-			sabotageWordIndex: 0,
-			guessedWordIndexes: [],
-		};
-		db.collection("games").add(cast data).then(doc -> {
-			trace("created game: " + doc.id);
-			Browser.location.href = "?game=" + doc.id;
-		});
-	}
-
-	static function enterName() {
-		assertNotNull(gameUrlParam);
-		assertNotNull(db);
-
-		final input:js.html.InputElement = cast Browser.document.getElementById("player-name");
-		final name = input.value.trim();
-		if (name == "") {
-			// TODO: show warning message.
-			return;
-		}
-
-		final playerId = Uuid.nanoId();
-		trace("Setting local storage");
-		Browser.getLocalStorage().setItem("playerId", playerId);
-
-		final update:DynamicAccess<Player> = {};
-		update.set('players.$playerId', {name: name, score: 0});
-		db.collection("games").doc(gameUrlParam).update(cast update).then(_ -> {
-			Browser.location.reload(/* forceget= */ false);
-		});
 	}
 
 	// TODO: Think about race condition when multiple users start at the same time.
@@ -151,7 +110,7 @@ class App {
 		db.collection("games").doc(gameUrlParam).update(cast update);
 	}
 
-	static function guessWord(index: Int) {
+	static function guessWord(index:Int) {
 		assertNotNull(currentGameData);
 		assertNotNull(db);
 
@@ -167,7 +126,6 @@ class App {
 		} else {
 			button.style.backgroundColor = 'lightblue';
 		}
-
 	}
 
 	static var app:Null<firebase.app.App> = null;
@@ -182,7 +140,11 @@ class App {
 		}
 	};
 
-	public static function main() {
+	static function main() {
+		new App();
+	}
+
+	override function init() {
 		// TODO: load this from external file and remove from Git (because this is a public repo and people might want to try it out).
 		final config = {
 			apiKey: "AIzaSyCn_j8KKaUcUkOWOLQzmx4_XhjFJ0LrKmg",
@@ -202,20 +164,14 @@ class App {
 
 		playerId = Browser.getLocalStorage().getItem("playerId");
 
-		Browser.document.getElementById("state-loading").style.display = "none";
+		final tf = new h2d.Text(hxd.res.DefaultFont.get(), s2d);
+		tf.text = "Loading...";
+		tf.scale(4);
+
 		if (gameUrlParam == null) {
-			Browser.document.getElementById("state-mainmenu").style.display = "block";
+			initMainScreen();
 		} else if (playerId == null) {
-			db.collection("games").doc(gameUrlParam).get().then(doc -> {
-				if (doc.data() == null) {
-					trace("Can't fetch game data");
-					Browser.location.href = "?";
-					return;
-				}
-				trace("Game data: " + doc.data());
-				Browser.document.getElementById("state-join").style.display = "block";
-				return;
-			});
+			initEnterNameScreen();
 		} else {
 			db.collection("games").doc(gameUrlParam).onSnapshot(data -> {
 				final gameData:GameData = cast data.data();
@@ -232,20 +188,9 @@ class App {
 					return;
 				}
 				if (currentGameData != gameData) {
-					Browser.document.getElementById("state-generictext").style.display = "none";
-					Browser.document.getElementById("state-saboteurenterword").style.display = "none";
-					Browser.document.getElementById("state-waitingroom").style.display = "none";
-					Browser.document.getElementById("state-guesswords").style.display = "none";
-					Browser.document.getElementById("state-guessedwords").style.display = "none";
 					switch (gameData.state) {
 						case WAITING_ROOM:
-							Browser.document.getElementById("state-waitingroom").style.display = "block";
-							final playerName = playerData.name;
-							var text = 'Welcome $playerName!<br>Game ID: $gameUrlParam<br><br>Players in the game:';
-							for (player in getPlayers(gameData)) {
-								text += "<br> - " + player.name;
-							}
-							setText(text, "text-waitingroom");
+							initWaitingScreen();
 						case SABOTEUR_ENTERING_WORD if (gameData.saboteurPlayerId != playerId):
 							assertNotNull(gameData.saboteurPlayerId);
 							final saboteur = gameData.players[gameData.saboteurPlayerId];
@@ -282,5 +227,150 @@ class App {
 				return;
 			});
 		}
+	}
+
+	function initMainScreen() {
+		s2d.removeChildren();
+		final flow = new h2d.Flow(s2d);
+		flow.layout = Vertical;
+		flow.verticalSpacing = 50;
+		flow.padding = 100;
+		flow.fillWidth = true;
+		flow.fillHeight = true;
+
+		final title = new h2d.Text(hxd.res.DefaultFont.get(), flow);
+		title.text = "Word Saboteur";
+		title.scale(4);
+
+		final button = new h2d.Flow(flow);
+		button.backgroundTile = h2d.Tile.fromColor(0x77777);
+		button.padding = 30;
+		button.verticalAlign = Middle;
+		button.horizontalAlign = Middle;
+		button.paddingBottom += 20;
+		button.enableInteractive = true;
+		button.interactive.onClick = (e) -> {
+			createGame();
+		}
+
+		final buttonText = new h2d.Text(hxd.res.DefaultFont.get(), button);
+		buttonText.text = "New game";
+		buttonText.scale(2);
+	}
+
+	
+	function createGame() {
+		assertNotNull(db);
+
+		final data:GameData = {
+			version: 1,
+			players: {},
+			state: WAITING_ROOM,
+			clueGiverPlayerId: null,
+			saboteurPlayerId: null,
+			targetWords: [],
+			sabotageWord: null,
+			sabotageWordIndex: 0,
+			guessedWordIndexes: [],
+		};
+		db.collection("games").add(cast data).then(doc -> {
+			trace("created game: " + doc.id);
+			setGameId(doc.id);
+			initEnterNameScreen();
+		});
+	}
+
+	function setGameId(newId) {
+		gameUrlParam = newId;
+		if (newId != null) {
+			Browser.window.history.pushState('', '', '?game=' + newId);
+		} else {
+			Browser.window.history.pushState('', '', '?');
+		}
+	}
+
+	function initEnterNameScreen() {
+		// assertNotNull(gameUrlParam);
+		assertNotNull(db);
+		db.collection("games").doc(gameUrlParam).get().then(doc -> {
+			if (doc.data() == null) {
+				trace("Can't fetch game data");
+				initMainScreen();
+				return;
+			}
+			trace("Game data: " + doc.data());
+
+			s2d.removeChildren();
+
+			final flow = new h2d.Flow(s2d);
+			flow.layout = Vertical;
+			flow.verticalSpacing = 50;
+			flow.padding = 100;
+			flow.fillWidth = true;
+			flow.fillHeight = true;
+
+			final title = new h2d.Text(hxd.res.DefaultFont.get(), flow);
+			title.text = "Word Saboteur - waiting room";
+			title.scale(4);
+
+			final prompt = new h2d.Text(hxd.res.DefaultFont.get(), flow);
+			prompt.text = "Enter your name:";
+			prompt.scale(2);
+
+			final input = new h2d.TextInput(hxd.res.DefaultFont.get(), flow);
+			input.scale(2);
+			input.inputWidth = 200;
+			input.backgroundColor = 0x80808080;
+			input.textColor = 0xAAAAAA;
+
+			final button = new h2d.Flow(flow);
+			button.backgroundTile = h2d.Tile.fromColor(0x77777);
+			button.padding = 30;
+			button.verticalAlign = Middle;
+			button.horizontalAlign = Middle;
+			button.enableInteractive = true;
+			button.interactive.onClick = (e) -> {
+				enterName(input.text);
+			}
+
+			final buttonText = new h2d.Text(hxd.res.DefaultFont.get(), button);
+			buttonText.text = "Join";
+			buttonText.scale(2);
+			button.paddingBottom += Std.int(buttonText.getBounds().height * 0.3);
+			return;
+		});
+	}
+
+	function enterName(inputFieldValue: String) {
+		assertNotNull(gameUrlParam);
+		assertNotNull(db);
+
+		final name = inputFieldValue.trim();
+		if (name == "") {
+			// TODO: show warning message.
+			return;
+		}
+
+		final playerId = Uuid.nanoId();
+		trace("Setting local storage");
+		Browser.getLocalStorage().setItem("playerId", playerId);
+
+		final update:DynamicAccess<Player> = {};
+		update.set('players.$playerId', {name: name, score: 0});
+		db.collection("games").doc(gameUrlParam).update(cast update).then(_ -> {
+			initWaitingScreen();
+		});
+	}
+
+	function initWaitingScreen() {
+		trace("TODO: waiting screen");
+/*
+		final playerName = playerData.name;
+		var text = 'Welcome $playerName!<br>Game ID: $gameUrlParam<br><br>Players in the game:';
+		for (player in getPlayers(gameData)) {
+			text += "<br> - " + player.name;
+		}
+		setText(text, "text-waitingroom");
+		*/
 	}
 }

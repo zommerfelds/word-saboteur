@@ -48,6 +48,8 @@ typedef GameData = {
 
 @:expose
 class App extends hxd.App {
+	final viewRoot = new h2d.Object();
+
 	static function setText(str, id = "my-text") {
 		Browser.document.getElementById(id).innerHTML = str;
 	}
@@ -145,6 +147,19 @@ class App extends hxd.App {
 	}
 
 	override function init() {
+		s2d.addChild(viewRoot);
+
+		final captureAllInputs = new h2d.Flow();
+		captureAllInputs.fillHeight = true;
+		captureAllInputs.fillWidth = true;
+		captureAllInputs.enableInteractive = true;
+		captureAllInputs.interactive.propagateEvents = true;
+		captureAllInputs.interactive.onClick = (e) -> {
+			js.Browser.document.getElementById("webgl").focus();
+		};
+		new h2d.Object(captureAllInputs);
+		s2d.addChildAt(captureAllInputs, 1);
+
 		// TODO: load this from external file and remove from Git (because this is a public repo and people might want to try it out).
 		final config = {
 			apiKey: "AIzaSyCn_j8KKaUcUkOWOLQzmx4_XhjFJ0LrKmg",
@@ -164,7 +179,7 @@ class App extends hxd.App {
 
 		playerId = Browser.getLocalStorage().getItem("playerId");
 
-		final tf = new h2d.Text(hxd.res.DefaultFont.get(), s2d);
+		final tf = new h2d.Text(hxd.res.DefaultFont.get(), viewRoot);
 		tf.text = "Loading...";
 		tf.scale(4);
 
@@ -230,8 +245,8 @@ class App extends hxd.App {
 	}
 
 	function initMainScreen() {
-		s2d.removeChildren();
-		final flow = new h2d.Flow(s2d);
+		viewRoot.removeChildren();
+		final flow = new h2d.Flow(viewRoot);
 		flow.layout = Vertical;
 		flow.verticalSpacing = 50;
 		flow.padding = 100;
@@ -258,7 +273,6 @@ class App extends hxd.App {
 		buttonText.scale(2);
 	}
 
-	
 	function createGame() {
 		assertNotNull(db);
 
@@ -300,9 +314,9 @@ class App extends hxd.App {
 			}
 			trace("Game data: " + doc.data());
 
-			s2d.removeChildren();
+			viewRoot.removeChildren();
 
-			final flow = new h2d.Flow(s2d);
+			final flow = new h2d.Flow(viewRoot);
 			flow.layout = Vertical;
 			flow.verticalSpacing = 50;
 			flow.padding = 100;
@@ -310,7 +324,7 @@ class App extends hxd.App {
 			flow.fillHeight = true;
 
 			final title = new h2d.Text(hxd.res.DefaultFont.get(), flow);
-			title.text = "Word Saboteur - waiting room";
+			title.text = "Word Saboteur - Waiting room";
 			title.scale(4);
 
 			final prompt = new h2d.Text(hxd.res.DefaultFont.get(), flow);
@@ -322,6 +336,22 @@ class App extends hxd.App {
 			input.inputWidth = 200;
 			input.backgroundColor = 0x80808080;
 			input.textColor = 0xAAAAAA;
+
+			if (hxd.System.getValue(IsTouch)) {
+				input.onClick = (e) -> {
+					final inputElem:js.html.InputElement = cast Browser.document.getElementById("dummyInput");
+					inputElem.focus();
+					inputElem.selectionStart = input.cursorIndex;
+				};
+
+				function f() {
+					final inputElem:js.html.InputElement = cast Browser.document.getElementById("dummyInput");
+					input.text = inputElem.value;
+					input.cursorIndex = inputElem.selectionStart;
+					haxe.Timer.delay(f, 50);
+				}
+				f();
+			}
 
 			final button = new h2d.Flow(flow);
 			button.backgroundTile = h2d.Tile.fromColor(0x77777);
@@ -341,7 +371,9 @@ class App extends hxd.App {
 		});
 	}
 
-	function enterName(inputFieldValue: String) {
+	function enterName(inputFieldValue:String) {
+		trace(">>> entered name: " + inputFieldValue);
+
 		assertNotNull(gameUrlParam);
 		assertNotNull(db);
 
@@ -364,13 +396,13 @@ class App extends hxd.App {
 
 	function initWaitingScreen() {
 		trace("TODO: waiting screen");
-/*
-		final playerName = playerData.name;
-		var text = 'Welcome $playerName!<br>Game ID: $gameUrlParam<br><br>Players in the game:';
-		for (player in getPlayers(gameData)) {
-			text += "<br> - " + player.name;
-		}
-		setText(text, "text-waitingroom");
-		*/
+		/*
+			final playerName = playerData.name;
+			var text = 'Welcome $playerName!<br>Game ID: $gameUrlParam<br><br>Players in the game:';
+			for (player in getPlayers(gameData)) {
+				text += "<br> - " + player.name;
+			}
+			setText(text, "text-waitingroom");
+		 */
 	}
 }

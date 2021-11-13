@@ -1,11 +1,10 @@
 package game;
 
+import firebase.Firebase;
 import firebase.firestore.FieldValue;
 import haxe.DynamicAccess;
-import uuid.Uuid;
 import js.html.URLSearchParams;
-import firebase.Firebase;
-import js.Browser;
+import uuid.Uuid;
 
 using StringTools;
 
@@ -18,6 +17,7 @@ enum abstract GameState(String) {
 	var WAITING_ROOM;
 	var SABOTEUR_ENTERING_WORD;
 	var GUESSING_WORD; // This includes giving a clue, which can happen via other communication channel.
+	var GUESSED_WORD; // End of the round
 }
 
 // TODO: there is probably a way to automate this with a macro
@@ -50,6 +50,9 @@ enum Screen {
 	Main;
 	EnterName;
 	Waiting;
+	WaitingForSaboteur;
+	SaboteurEnterWord;
+	Guessing;
 }
 
 @:expose
@@ -57,11 +60,7 @@ class App extends hxd.App {
 	final viewRoot = new h2d.Object();
 	var currentScreen:Null<Screen> = null;
 
-	static function setText(str, id = "my-text") {
-		Browser.document.getElementById(id).innerHTML = str;
-	}
-
-	static function getPlayers(gameData:GameData):Map<String, Player> {
+	function getPlayers(gameData:GameData):Map<String, Player> {
 		final map:Map<String, Player> = [];
 		final it = gameData.players.keyValueIterator();
 		while (it.hasNext()) {
@@ -78,8 +77,6 @@ class App extends hxd.App {
 		assertNotNull(playerId);
 		assertNotNull(db);
 		assertNotNull(currentGameData);
-		if (currentGameData.state != WAITING_ROOM)
-			return;
 
 		final update:DynamicAccess<Dynamic> = {};
 		update.set(GameDataFields.state, SABOTEUR_ENTERING_WORD);
@@ -98,14 +95,13 @@ class App extends hxd.App {
 		db.collection("games").doc(gameUrlParam).update(cast update);
 	}
 
-	static function enterSaboteurWord() {
+	function enterSaboteurWord(inputFieldValue:String) {
 		assertNotNull(db);
 		assertNotNull(currentGameData);
 		if (currentGameData.state != SABOTEUR_ENTERING_WORD)
 			return;
 
-		final input:js.html.InputElement = cast Browser.document.getElementById("input-saboteur");
-		final word = input.value.trim();
+		final word = inputFieldValue.trim();
 		if (word == "") {
 			// TODO: show warning message.
 			return;
@@ -119,7 +115,7 @@ class App extends hxd.App {
 		db.collection("games").doc(gameUrlParam).update(cast update);
 	}
 
-	static function guessWord(index:Int) {
+	function guessWord(index:Int) {
 		assertNotNull(currentGameData);
 		assertNotNull(db);
 
@@ -127,21 +123,13 @@ class App extends hxd.App {
 		// update.set(GameDataFields.state, GUESSED_ALL_WORDS);
 		update.set(GameDataFields.guessedWordIndexes, FieldValue.arrayUnion(index));
 		db.collection("games").doc(gameUrlParam).update(cast update);
-
-		final button:js.html.ButtonElement = cast Browser.document.getElementById('button-guess-$index');
-		button.disabled = true;
-		if (index == currentGameData.sabotageWordIndex) {
-			button.style.backgroundColor = 'lightcoral';
-		} else {
-			button.style.backgroundColor = 'lightblue';
-		}
 	}
 
-	static var app:Null<firebase.app.App> = null;
-	static var db:Null<firebase.firestore.Firestore> = null;
-	static var gameUrlParam:Null<String> = null;
-	static var currentGameData:Null<GameData> = null;
-	static var playerId:Null<String> = null;
+	var app:Null<firebase.app.App> = null;
+	var db:Null<firebase.firestore.Firestore> = null;
+	var gameUrlParam:Null<String> = null;
+	var currentGameData:Null<GameData> = null;
+	var playerId:Null<String> = null;
 
 	static inline function assertNotNull(value:Null<Dynamic>, message = "value can't be null") {
 		if (value == null) {
@@ -181,10 +169,10 @@ class App extends hxd.App {
 		app = Firebase.initializeApp(config);
 		db = app.firestore();
 
-		final urlParams = new URLSearchParams(Browser.window.location.search);
+		final urlParams = new URLSearchParams(js.Browser.window.location.search);
 		gameUrlParam = urlParams.get("game");
 
-		playerId = Browser.getLocalStorage().getItem("playerId");
+		playerId = js.Browser.getLocalStorage().getItem("playerId");
 
 		final tf = new h2d.Text(hxd.res.DefaultFont.get(), viewRoot);
 		tf.text = "Loading...";
@@ -203,7 +191,7 @@ class App extends hxd.App {
 			final gameData:GameData = cast data.data();
 			if (gameData == null) {
 				trace("Can't fetch game data");
-				Browser.location.href = "?";
+				js.Browser.location.href = "?";
 				return;
 			}
 			trace("Game data: " + gameData);
@@ -217,8 +205,8 @@ class App extends hxd.App {
 
 			final playerData = gameData.players.get(playerId);
 			if (playerData == null) {
-				Browser.getLocalStorage().removeItem("playerId");
-				Browser.location.reload(/* forceget= */ false);
+				js.Browser.getLocalStorage().removeItem("playerId");
+				js.Browser.location.reload(/* forceget= */ false);
 				return;
 			}
 			if (currentGameData != gameData) {
@@ -227,35 +215,13 @@ class App extends hxd.App {
 					case WAITING_ROOM:
 						initWaitingScreen();
 					case SABOTEUR_ENTERING_WORD if (gameData.saboteurPlayerId != playerId):
-						assertNotNull(gameData.saboteurPlayerId);
-						final saboteur = gameData.players[gameData.saboteurPlayerId];
-						assertNotNull(saboteur);
-						Browser.document.getElementById("state-generictext").style.display = "block";
-						// TODO: do we show the saboteur's name?
-						setText('${saboteur.name} is entering a word');
+						initWaitingForSaboteurScreen();
 					case SABOTEUR_ENTERING_WORD:
-						final text = 'You are the saboteur!<br><br>The target words are:<br>${gameData.targetWords[0]}, ${gameData.targetWords[1]}<br><br>Enter your sabotage word below:';
-						setText(text, "text-saboteur");
-						Browser.document.getElementById("state-saboteurenterword").style.display = "block";
-					case GUESSING_WORD if (gameData.saboteurPlayerId == playerId):
-						Browser.document.getElementById("state-generictext").style.display = "block";
-						setText('The other team is guessing the words now.');
-					case GUESSING_WORD if (gameData.clueGiverPlayerId != playerId):
-						assertNotNull(gameData.clueGiverPlayerId);
-						assertNotNull(gameData.sabotageWord);
-						final clueGiver = gameData.players[gameData.clueGiverPlayerId];
-						assertNotNull(clueGiver);
-						final text = '${clueGiver.name} will give you a clue. Please guess the two correct words:';
-						final words = gameData.targetWords.copy();
-						words.insert(gameData.sabotageWordIndex, gameData.sabotageWord);
-						setText(text, "text-guess");
-						for (i in 0...3) {
-							Browser.document.getElementById('button-guess-$i').textContent = words[i];
-						}
-						Browser.document.getElementById("state-guesswords").style.display = "block";
+						initSaboteurEnterWordScreen();
 					case GUESSING_WORD:
-						Browser.document.getElementById("state-generictext").style.display = "block";
-						setText('You are the clue giver! Please give a clue for your team mates.<br><br>Correct words: ${gameData.targetWords[0]}, ${gameData.targetWords[1]}<br>Wrong word: ${gameData.sabotageWord}');
+						initGuessingScreen();
+					case GUESSED_WORD:
+						initGuessingScreen();
 				}
 			}
 			return;
@@ -316,9 +282,9 @@ class App extends hxd.App {
 	function setGameId(newId) {
 		gameUrlParam = newId;
 		if (newId != null) {
-			Browser.window.history.pushState('', '', '?game=' + newId);
+			js.Browser.window.history.pushState('', '', '?game=' + newId);
 		} else {
-			Browser.window.history.pushState('', '', '?');
+			js.Browser.window.history.pushState('', '', '?');
 		}
 	}
 
@@ -335,49 +301,18 @@ class App extends hxd.App {
 		flow.fillHeight = true;
 
 		final title = new h2d.Text(hxd.res.DefaultFont.get(), flow);
-		title.text = "Word Saboteur - Joining game";
+		title.text = "Joining game";
 		title.scale(4);
 
 		final prompt = new h2d.Text(hxd.res.DefaultFont.get(), flow);
 		prompt.text = "Enter your name:";
 		prompt.scale(2);
 
-		final input = new h2d.TextInput(hxd.res.DefaultFont.get(), flow);
+		final input = new Gui.TextInputWithMobileKeyboardSupport(hxd.res.DefaultFont.get(), flow);
 		input.scale(2);
-		input.inputWidth = 200;
-		input.backgroundColor = 0x80808080;
-		input.textColor = 0xAAAAAA;
+		input.inputWidth = Std.int(flow.innerWidth / input.scaleX);
 
-		if (hxd.System.getValue(IsTouch)) {
-			input.onClick = (e) -> {
-				final inputElem:js.html.InputElement = cast Browser.document.getElementById("dummyInput");
-				inputElem.focus();
-				inputElem.selectionStart = input.cursorIndex;
-			};
-
-			function f() {
-				final inputElem:js.html.InputElement = cast Browser.document.getElementById("dummyInput");
-				input.text = inputElem.value;
-				input.cursorIndex = inputElem.selectionStart;
-				haxe.Timer.delay(f, 50);
-			}
-			f();
-		}
-
-		final button = new h2d.Flow(flow);
-		button.backgroundTile = h2d.Tile.fromColor(0x77777);
-		button.padding = 30;
-		button.verticalAlign = Middle;
-		button.horizontalAlign = Middle;
-		button.enableInteractive = true;
-		button.interactive.onClick = (e) -> {
-			enterName(input.text);
-		}
-
-		final buttonText = new h2d.Text(hxd.res.DefaultFont.get(), button);
-		buttonText.text = "Join";
-		buttonText.scale(2);
-		button.paddingBottom += Std.int(buttonText.getBounds().height * 0.3);
+		new Gui.Button(flow, "Join", () -> enterName(input.text));
 	}
 
 	function enterName(inputFieldValue:String) {
@@ -392,7 +327,7 @@ class App extends hxd.App {
 
 		playerId = Uuid.nanoId();
 		trace("Setting local storage");
-		Browser.getLocalStorage().setItem("playerId", playerId);
+		js.Browser.getLocalStorage().setItem("playerId", playerId);
 
 		final update:DynamicAccess<Player> = {};
 		update.set('players.$playerId', {name: name, score: 0});
@@ -416,7 +351,7 @@ class App extends hxd.App {
 		flow.fillHeight = true;
 
 		final title = new h2d.Text(hxd.res.DefaultFont.get(), flow);
-		title.text = "Word Saboteur - Waiting room";
+		title.text = "Waiting room";
 		title.scale(4);
 
 		final prompt = new h2d.Text(hxd.res.DefaultFont.get(), flow);
@@ -429,19 +364,133 @@ class App extends hxd.App {
 		}
 		prompt.scale(2);
 
-		final button = new h2d.Flow(flow);
-		button.backgroundTile = h2d.Tile.fromColor(0x77777);
-		button.padding = 30;
-		button.verticalAlign = Middle;
-		button.horizontalAlign = Middle;
-		button.enableInteractive = true;
-		button.interactive.onClick = (e) -> {
-			startGame();
+		new Gui.Button(flow, "Start game", startGame);
+	}
+
+	function initWaitingForSaboteurScreen() {
+		currentScreen = WaitingForSaboteur;
+		assertNotNull(currentGameData);
+		assertNotNull(currentGameData.saboteurPlayerId);
+		final saboteur = currentGameData.players[currentGameData.saboteurPlayerId];
+		assertNotNull(saboteur);
+
+		viewRoot.removeChildren();
+
+		final flow = new h2d.Flow(viewRoot);
+		flow.layout = Vertical;
+		flow.verticalSpacing = 50;
+		flow.padding = 100;
+		flow.fillWidth = true;
+		flow.fillHeight = true;
+
+		final title = new h2d.Text(hxd.res.DefaultFont.get(), flow);
+		title.text = "Saboteur round";
+		title.scale(4);
+
+		final text = new h2d.Text(hxd.res.DefaultFont.get(), flow);
+		text.text = '${saboteur.name} is the saboteur!\n\nPlease wait for the saboteur to enter a word.';
+		text.scale(2);
+	}
+
+	function initSaboteurEnterWordScreen() {
+		currentScreen = SaboteurEnterWord;
+		assertNotNull(currentGameData);
+
+		viewRoot.removeChildren();
+
+		final flow = new h2d.Flow(viewRoot);
+		flow.layout = Vertical;
+		flow.verticalSpacing = 50;
+		flow.padding = 100;
+		flow.fillWidth = true;
+		flow.fillHeight = true;
+
+		final title = new h2d.Text(hxd.res.DefaultFont.get(), flow);
+		title.text = "Saboteur round";
+		title.scale(4);
+
+		final text = new h2d.Text(hxd.res.DefaultFont.get(), flow);
+		text.text = 'You are the saboteur!\n\nThe target words are:';
+		text.scale(2);
+
+		final choicesFlow = new h2d.Flow(flow);
+		choicesFlow.verticalSpacing = 10;
+		choicesFlow.layout = Vertical;
+		for (word in currentGameData.targetWords) {
+			final button = new Gui.Button(choicesFlow, word, () -> {});
+			button.backgroundTile = h2d.Tile.fromColor(0x858585);
 		}
 
-		final buttonText = new h2d.Text(hxd.res.DefaultFont.get(), button);
-		buttonText.text = "Start game";
-		buttonText.scale(2);
-		button.paddingBottom += Std.int(buttonText.getBounds().height * 0.3);
+		final prompt = new h2d.Text(hxd.res.DefaultFont.get(), flow);
+		prompt.text = 'Enter your sabotage word below:';
+		prompt.scale(2);
+
+		final input = new Gui.TextInputWithMobileKeyboardSupport(hxd.res.DefaultFont.get(), flow);
+		input.scale(2);
+		input.inputWidth = Std.int(flow.innerWidth / input.scaleX);
+
+		new Gui.Button(flow, "Done", () -> enterSaboteurWord(input.text));
+	}
+
+	function initGuessingScreen() {
+		currentScreen = Guessing;
+		assertNotNull(currentGameData);
+		assertNotNull(currentGameData.clueGiverPlayerId);
+		assertNotNull(currentGameData.sabotageWord);
+		final clueGiver = currentGameData.players[currentGameData.clueGiverPlayerId];
+		assertNotNull(clueGiver);
+
+		viewRoot.removeChildren();
+
+		final flow = new h2d.Flow(viewRoot);
+		flow.layout = Vertical;
+		flow.verticalSpacing = 50;
+		flow.padding = 100;
+		flow.fillWidth = true;
+		flow.fillHeight = true;
+
+		final title = new h2d.Text(hxd.res.DefaultFont.get(), flow);
+		title.text = "Guessing round";
+		title.scale(4);
+
+		final isClueGiver = currentGameData.clueGiverPlayerId == playerId;
+		final isGuesser = !isClueGiver && currentGameData.saboteurPlayerId != playerId;
+		final doneGuessing = currentGameData.guessedWordIndexes.length == 2
+			|| currentGameData.guessedWordIndexes.indexOf(currentGameData.sabotageWordIndex) != -1;
+
+		final text = new h2d.Text(hxd.res.DefaultFont.get(), flow);
+		if (isClueGiver) {
+			text.text = 'You are the clue giver! Please give a clue for your team mates.';
+		} else if (isGuesser) {
+			text.text = '${clueGiver.name} will give you a clue. Please guess the two correct words:';
+		} else {
+			text.text = 'Please wait for the others to pick two words. ${clueGiver.name} is the clue giver.';
+		}
+		text.scale(2);
+
+		final choicesFlow = new h2d.Flow(flow);
+		choicesFlow.verticalSpacing = 10;
+		choicesFlow.layout = Vertical;
+		final words = currentGameData.targetWords.copy();
+		words.insert(currentGameData.sabotageWordIndex, currentGameData.sabotageWord);
+		for (i in 0...3) {
+			var buttonLabel = words[i];
+			if (isClueGiver && currentGameData.sabotageWordIndex == i) {
+				buttonLabel += " (sabotage)";
+			}
+			final button = new Gui.Button(choicesFlow, buttonLabel, () -> isGuesser && !doneGuessing ? guessWord(i) : null);
+			button.backgroundTile = h2d.Tile.fromColor(0x858585);
+			if (currentGameData.guessedWordIndexes.indexOf(i) != -1) {
+				if (currentGameData.sabotageWordIndex == i) {
+					button.backgroundTile = h2d.Tile.fromColor(0x8f4731);
+				} else {
+					button.backgroundTile = h2d.Tile.fromColor(0x318f42);
+				}
+			}
+		}
+
+		if (doneGuessing) {
+			new Gui.Button(flow, "Next round", startGame);
+		}
 	}
 }

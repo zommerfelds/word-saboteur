@@ -46,9 +46,16 @@ typedef GameData = {
 	guessedWordIndexes:Array<Int>,
 };
 
+enum Screen {
+	Main;
+	EnterName;
+	Waiting;
+}
+
 @:expose
 class App extends hxd.App {
 	final viewRoot = new h2d.Object();
+	var currentScreen:Null<Screen> = null;
 
 	static function setText(str, id = "my-text") {
 		Browser.document.getElementById(id).innerHTML = str;
@@ -185,66 +192,78 @@ class App extends hxd.App {
 
 		if (gameUrlParam == null) {
 			initMainScreen();
-		} else if (playerId == null) {
-			initEnterNameScreen();
 		} else {
-			db.collection("games").doc(gameUrlParam).onSnapshot(data -> {
-				final gameData:GameData = cast data.data();
-				if (gameData == null) {
-					trace("Can't fetch game data");
-					Browser.location.href = "?";
-					return;
-				}
-				trace("Game data: " + gameData);
-				final playerData = gameData.players.get(playerId);
-				if (playerData == null) {
-					Browser.getLocalStorage().removeItem("playerId");
-					Browser.location.reload(/* forceget= */ false);
-					return;
-				}
-				if (currentGameData != gameData) {
-					switch (gameData.state) {
-						case WAITING_ROOM:
-							initWaitingScreen();
-						case SABOTEUR_ENTERING_WORD if (gameData.saboteurPlayerId != playerId):
-							assertNotNull(gameData.saboteurPlayerId);
-							final saboteur = gameData.players[gameData.saboteurPlayerId];
-							assertNotNull(saboteur);
-							Browser.document.getElementById("state-generictext").style.display = "block";
-							// TODO: do we show the saboteur's name?
-							setText('${saboteur.name} is entering a word');
-						case SABOTEUR_ENTERING_WORD:
-							final text = 'You are the saboteur!<br><br>The target words are:<br>${gameData.targetWords[0]}, ${gameData.targetWords[1]}<br><br>Enter your sabotage word below:';
-							setText(text, "text-saboteur");
-							Browser.document.getElementById("state-saboteurenterword").style.display = "block";
-						case GUESSING_WORD if (gameData.saboteurPlayerId == playerId):
-							Browser.document.getElementById("state-generictext").style.display = "block";
-							setText('The other team is guessing the words now.');
-						case GUESSING_WORD if (gameData.clueGiverPlayerId != playerId):
-							assertNotNull(gameData.clueGiverPlayerId);
-							assertNotNull(gameData.sabotageWord);
-							final clueGiver = gameData.players[gameData.clueGiverPlayerId];
-							assertNotNull(clueGiver);
-							final text = '${clueGiver.name} will give you a clue. Please guess the two correct words:';
-							final words = gameData.targetWords.copy();
-							words.insert(gameData.sabotageWordIndex, gameData.sabotageWord);
-							setText(text, "text-guess");
-							for (i in 0...3) {
-								Browser.document.getElementById('button-guess-$i').textContent = words[i];
-							}
-							Browser.document.getElementById("state-guesswords").style.display = "block";
-						case GUESSING_WORD:
-							Browser.document.getElementById("state-generictext").style.display = "block";
-							setText('You are the clue giver! Please give a clue for your team mates.<br><br>Correct words: ${gameData.targetWords[0]}, ${gameData.targetWords[1]}<br>Wrong word: ${gameData.sabotageWord}');
-					}
-				}
-				currentGameData = gameData;
-				return;
-			});
+			startDataUpdateWatcher();
 		}
 	}
 
+	function startDataUpdateWatcher() {
+		assertNotNull(db);
+		db.collection("games").doc(gameUrlParam).onSnapshot(data -> {
+			final gameData:GameData = cast data.data();
+			if (gameData == null) {
+				trace("Can't fetch game data");
+				Browser.location.href = "?";
+				return;
+			}
+			trace("Game data: " + gameData);
+
+			if (playerId == null) {
+				if (currentScreen != EnterName) {
+					initEnterNameScreen();
+				}
+				return;
+			}
+
+			final playerData = gameData.players.get(playerId);
+			if (playerData == null) {
+				Browser.getLocalStorage().removeItem("playerId");
+				Browser.location.reload(/* forceget= */ false);
+				return;
+			}
+			if (currentGameData != gameData) {
+				currentGameData = gameData;
+				switch (gameData.state) {
+					case WAITING_ROOM:
+						initWaitingScreen();
+					case SABOTEUR_ENTERING_WORD if (gameData.saboteurPlayerId != playerId):
+						assertNotNull(gameData.saboteurPlayerId);
+						final saboteur = gameData.players[gameData.saboteurPlayerId];
+						assertNotNull(saboteur);
+						Browser.document.getElementById("state-generictext").style.display = "block";
+						// TODO: do we show the saboteur's name?
+						setText('${saboteur.name} is entering a word');
+					case SABOTEUR_ENTERING_WORD:
+						final text = 'You are the saboteur!<br><br>The target words are:<br>${gameData.targetWords[0]}, ${gameData.targetWords[1]}<br><br>Enter your sabotage word below:';
+						setText(text, "text-saboteur");
+						Browser.document.getElementById("state-saboteurenterword").style.display = "block";
+					case GUESSING_WORD if (gameData.saboteurPlayerId == playerId):
+						Browser.document.getElementById("state-generictext").style.display = "block";
+						setText('The other team is guessing the words now.');
+					case GUESSING_WORD if (gameData.clueGiverPlayerId != playerId):
+						assertNotNull(gameData.clueGiverPlayerId);
+						assertNotNull(gameData.sabotageWord);
+						final clueGiver = gameData.players[gameData.clueGiverPlayerId];
+						assertNotNull(clueGiver);
+						final text = '${clueGiver.name} will give you a clue. Please guess the two correct words:';
+						final words = gameData.targetWords.copy();
+						words.insert(gameData.sabotageWordIndex, gameData.sabotageWord);
+						setText(text, "text-guess");
+						for (i in 0...3) {
+							Browser.document.getElementById('button-guess-$i').textContent = words[i];
+						}
+						Browser.document.getElementById("state-guesswords").style.display = "block";
+					case GUESSING_WORD:
+						Browser.document.getElementById("state-generictext").style.display = "block";
+						setText('You are the clue giver! Please give a clue for your team mates.<br><br>Correct words: ${gameData.targetWords[0]}, ${gameData.targetWords[1]}<br>Wrong word: ${gameData.sabotageWord}');
+				}
+			}
+			return;
+		});
+	}
+
 	function initMainScreen() {
+		currentScreen = Main;
 		viewRoot.removeChildren();
 		final flow = new h2d.Flow(viewRoot);
 		flow.layout = Vertical;
@@ -290,7 +309,7 @@ class App extends hxd.App {
 		db.collection("games").add(cast data).then(doc -> {
 			trace("created game: " + doc.id);
 			setGameId(doc.id);
-			initEnterNameScreen();
+			startDataUpdateWatcher();
 		});
 	}
 
@@ -304,7 +323,7 @@ class App extends hxd.App {
 	}
 
 	function initEnterNameScreen() {
-		// assertNotNull(gameUrlParam);
+		currentScreen = EnterName;
 		assertNotNull(db);
 		db.collection("games").doc(gameUrlParam).get().then(doc -> {
 			if (doc.data() == null) {
@@ -324,7 +343,7 @@ class App extends hxd.App {
 			flow.fillHeight = true;
 
 			final title = new h2d.Text(hxd.res.DefaultFont.get(), flow);
-			title.text = "Word Saboteur - Waiting room";
+			title.text = "Word Saboteur - Joining game";
 			title.scale(4);
 
 			final prompt = new h2d.Text(hxd.res.DefaultFont.get(), flow);
@@ -383,26 +402,43 @@ class App extends hxd.App {
 			return;
 		}
 
-		final playerId = Uuid.nanoId();
+		playerId = Uuid.nanoId();
 		trace("Setting local storage");
 		Browser.getLocalStorage().setItem("playerId", playerId);
 
 		final update:DynamicAccess<Player> = {};
 		update.set('players.$playerId', {name: name, score: 0});
-		db.collection("games").doc(gameUrlParam).update(cast update).then(_ -> {
-			initWaitingScreen();
-		});
+		db.collection("games").doc(gameUrlParam).update(cast update);
+		// Data watcher will pickup the change and should init a new view.
 	}
 
 	function initWaitingScreen() {
-		trace("TODO: waiting screen");
-		/*
-			final playerName = playerData.name;
-			var text = 'Welcome $playerName!<br>Game ID: $gameUrlParam<br><br>Players in the game:';
-			for (player in getPlayers(gameData)) {
-				text += "<br> - " + player.name;
-			}
-			setText(text, "text-waitingroom");
-		 */
+		currentScreen = Waiting;
+		assertNotNull(playerId);
+		assertNotNull(currentGameData);
+		assertNotNull(currentGameData.players);
+
+		viewRoot.removeChildren();
+
+		final flow = new h2d.Flow(viewRoot);
+		flow.layout = Vertical;
+		flow.verticalSpacing = 50;
+		flow.padding = 100;
+		flow.fillWidth = true;
+		flow.fillHeight = true;
+
+		final title = new h2d.Text(hxd.res.DefaultFont.get(), flow);
+		title.text = "Word Saboteur - Waiting room";
+		title.scale(4);
+
+		final prompt = new h2d.Text(hxd.res.DefaultFont.get(), flow);
+		final playerData = currentGameData.players.get(playerId);
+		assertNotNull(playerData);
+
+		prompt.text = 'Welcome ${playerData.name}!\n\nPlayers in the game:';
+		for (player in getPlayers(currentGameData)) {
+			prompt.text += "\n- " + player.name;
+		}
+		prompt.scale(2);
 	}
 }

@@ -74,7 +74,7 @@ class App extends hxd.App {
 
 	// TODO: Think about race condition when multiple users start at the same time.
 	//       Maybe Firesafe would help here.
-	static function startGame() {
+	function startGame() {
 		assertNotNull(playerId);
 		assertNotNull(db);
 		assertNotNull(currentGameData);
@@ -324,75 +324,63 @@ class App extends hxd.App {
 
 	function initEnterNameScreen() {
 		currentScreen = EnterName;
-		assertNotNull(db);
-		db.collection("games").doc(gameUrlParam).get().then(doc -> {
-			if (doc.data() == null) {
-				trace("Can't fetch game data");
-				initMainScreen();
-				return;
+
+		viewRoot.removeChildren();
+
+		final flow = new h2d.Flow(viewRoot);
+		flow.layout = Vertical;
+		flow.verticalSpacing = 50;
+		flow.padding = 100;
+		flow.fillWidth = true;
+		flow.fillHeight = true;
+
+		final title = new h2d.Text(hxd.res.DefaultFont.get(), flow);
+		title.text = "Word Saboteur - Joining game";
+		title.scale(4);
+
+		final prompt = new h2d.Text(hxd.res.DefaultFont.get(), flow);
+		prompt.text = "Enter your name:";
+		prompt.scale(2);
+
+		final input = new h2d.TextInput(hxd.res.DefaultFont.get(), flow);
+		input.scale(2);
+		input.inputWidth = 200;
+		input.backgroundColor = 0x80808080;
+		input.textColor = 0xAAAAAA;
+
+		if (hxd.System.getValue(IsTouch)) {
+			input.onClick = (e) -> {
+				final inputElem:js.html.InputElement = cast Browser.document.getElementById("dummyInput");
+				inputElem.focus();
+				inputElem.selectionStart = input.cursorIndex;
+			};
+
+			function f() {
+				final inputElem:js.html.InputElement = cast Browser.document.getElementById("dummyInput");
+				input.text = inputElem.value;
+				input.cursorIndex = inputElem.selectionStart;
+				haxe.Timer.delay(f, 50);
 			}
-			trace("Game data: " + doc.data());
+			f();
+		}
 
-			viewRoot.removeChildren();
+		final button = new h2d.Flow(flow);
+		button.backgroundTile = h2d.Tile.fromColor(0x77777);
+		button.padding = 30;
+		button.verticalAlign = Middle;
+		button.horizontalAlign = Middle;
+		button.enableInteractive = true;
+		button.interactive.onClick = (e) -> {
+			enterName(input.text);
+		}
 
-			final flow = new h2d.Flow(viewRoot);
-			flow.layout = Vertical;
-			flow.verticalSpacing = 50;
-			flow.padding = 100;
-			flow.fillWidth = true;
-			flow.fillHeight = true;
-
-			final title = new h2d.Text(hxd.res.DefaultFont.get(), flow);
-			title.text = "Word Saboteur - Joining game";
-			title.scale(4);
-
-			final prompt = new h2d.Text(hxd.res.DefaultFont.get(), flow);
-			prompt.text = "Enter your name:";
-			prompt.scale(2);
-
-			final input = new h2d.TextInput(hxd.res.DefaultFont.get(), flow);
-			input.scale(2);
-			input.inputWidth = 200;
-			input.backgroundColor = 0x80808080;
-			input.textColor = 0xAAAAAA;
-
-			if (hxd.System.getValue(IsTouch)) {
-				input.onClick = (e) -> {
-					final inputElem:js.html.InputElement = cast Browser.document.getElementById("dummyInput");
-					inputElem.focus();
-					inputElem.selectionStart = input.cursorIndex;
-				};
-
-				function f() {
-					final inputElem:js.html.InputElement = cast Browser.document.getElementById("dummyInput");
-					input.text = inputElem.value;
-					input.cursorIndex = inputElem.selectionStart;
-					haxe.Timer.delay(f, 50);
-				}
-				f();
-			}
-
-			final button = new h2d.Flow(flow);
-			button.backgroundTile = h2d.Tile.fromColor(0x77777);
-			button.padding = 30;
-			button.verticalAlign = Middle;
-			button.horizontalAlign = Middle;
-			button.enableInteractive = true;
-			button.interactive.onClick = (e) -> {
-				enterName(input.text);
-			}
-
-			final buttonText = new h2d.Text(hxd.res.DefaultFont.get(), button);
-			buttonText.text = "Join";
-			buttonText.scale(2);
-			button.paddingBottom += Std.int(buttonText.getBounds().height * 0.3);
-			return;
-		});
+		final buttonText = new h2d.Text(hxd.res.DefaultFont.get(), button);
+		buttonText.text = "Join";
+		buttonText.scale(2);
+		button.paddingBottom += Std.int(buttonText.getBounds().height * 0.3);
 	}
 
 	function enterName(inputFieldValue:String) {
-		trace(">>> entered name: " + inputFieldValue);
-
 		assertNotNull(gameUrlParam);
 		assertNotNull(db);
 
@@ -440,5 +428,20 @@ class App extends hxd.App {
 			prompt.text += "\n- " + player.name;
 		}
 		prompt.scale(2);
+
+		final button = new h2d.Flow(flow);
+		button.backgroundTile = h2d.Tile.fromColor(0x77777);
+		button.padding = 30;
+		button.verticalAlign = Middle;
+		button.horizontalAlign = Middle;
+		button.enableInteractive = true;
+		button.interactive.onClick = (e) -> {
+			startGame();
+		}
+
+		final buttonText = new h2d.Text(hxd.res.DefaultFont.get(), button);
+		buttonText.text = "Start game";
+		buttonText.scale(2);
+		button.paddingBottom += Std.int(buttonText.getBounds().height * 0.3);
 	}
 }

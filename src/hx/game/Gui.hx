@@ -1,14 +1,18 @@
 package game;
 
 class TextInputWithMobileKeyboardSupport extends h2d.TextInput {
+	final inputElem:js.html.InputElement = cast js.Browser.document.getElementById("dummyInput");
+
 	public function new(font, parent) {
 		super(font, parent);
 		backgroundColor = 0x80808080;
 		textColor = 0xAAAAAA;
 
+		// Clear the text in case a previous value was entered.
+		inputElem.value = "";
+
 		if (hxd.System.getValue(IsTouch)) {
 			onClick = (e) -> {
-				final inputElem:js.html.InputElement = cast js.Browser.document.getElementById("dummyInput");
 				inputElem.focus();
                 inputElem.setSelectionRange(cursorIndex, cursorIndex);
 			};
@@ -17,7 +21,6 @@ class TextInputWithMobileKeyboardSupport extends h2d.TextInput {
 
 	override function sync(ctx) {
 		if (hxd.System.getValue(IsTouch)) {
-			final inputElem:js.html.InputElement = cast js.Browser.document.getElementById("dummyInput");
 			text = inputElem.value;
 			cursorIndex = inputElem.selectionStart;
             selectionSize = 1;

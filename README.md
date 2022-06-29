@@ -5,7 +5,13 @@ A simple multiplayer game
 
 ## Development
 
+### Online IDE
+
+Everything should run automatically from Gitpod:
+
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/zommerfelds/word-saboteur)
+
+### Manual setup
 
 Setup environment
 ```

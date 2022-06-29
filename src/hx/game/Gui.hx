@@ -39,9 +39,15 @@ class TextInputWithMobileKeyboardSupport extends h2d.TextInput {
 }
 
 class Button extends h2d.Flow {
+	// Can't be static because the graphics system won't be ready at initialization.
+	final enabledTile = h2d.Tile.fromColor(0x077777);
+	final disabledTile = h2d.Tile.fromColor(0x676767);
+	final buttonText = new h2d.Text(hxd.res.DefaultFont.get());
+
+	public var text(get, set):String;
+
 	public function new(parent, text, onClick) {
 		super(parent);
-		backgroundTile = h2d.Tile.fromColor(0x77777);
 		padding = 30;
 		verticalAlign = Middle;
 		horizontalAlign = Middle;
@@ -49,9 +55,22 @@ class Button extends h2d.Flow {
 		fillWidth = true;
 		interactive.onClick = (e) -> onClick();
 
-		final buttonText = new h2d.Text(hxd.res.DefaultFont.get(), this);
 		buttonText.text = text;
 		buttonText.scale(2);
+		addChild(buttonText);
 		paddingBottom += Std.int(buttonText.getBounds().height * 0.3);
+	}
+
+	function get_text() {
+		return buttonText.text;
+	}
+
+	function set_text(val) {
+		return buttonText.text = val;
+	}
+
+	override function sync(ctx:h2d.RenderContext) {
+		backgroundTile = enableInteractive ? enabledTile : disabledTile;
+		super.sync(ctx);
 	}
 }

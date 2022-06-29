@@ -71,6 +71,17 @@ class App extends hxd.App {
 		return map;
 	}
 
+	function getNumPlayers(gameData:GameData):Int {
+		var count = 0;
+		final it = gameData.players.iterator();
+		while (it.hasNext()) {
+			@:nullSafety(Off)
+			it.next();
+			count++;
+		}
+		return count;
+	}
+
 	// TODO: Think about race condition when multiple users start at the same time.
 	//       Maybe Firesafe would help here.
 	function startGame() {
@@ -365,7 +376,15 @@ class App extends hxd.App {
 		}
 		prompt.scale(2);
 
-		new Gui.Button(flow, "Start game", startGame);
+		final startGameButton = new Gui.Button(flow, "", startGame);
+		startGameButton.enableInteractive = false;
+		new Utils.UpdateFunctionObject(() -> {
+			assertNotNull(currentGameData);
+			assertNotNull(currentGameData.players);
+			final ready = getNumPlayers(currentGameData) >= 3;
+			startGameButton.enableInteractive = ready;
+			startGameButton.text = ready ? "Start game" : "Need 3 players";
+		}, startGameButton);
 	}
 
 	function initWaitingForSaboteurScreen() {

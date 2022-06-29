@@ -12,25 +12,29 @@ class TextInputWithMobileKeyboardSupport extends h2d.TextInput {
 		// Clear the text in case a previous value was entered.
 		inputElem.value = "";
 
-		// This is only useful for mobile, but maybe we could enable it always just to avoid branching?
-		if (hxd.System.getValue(IsTouch)) {
-			onClick = (e) -> {
-				inputElem.focus();
-				inputElem.setSelectionRange(cursorIndex, cursorIndex);
-			};
-		}
+		onClick = (e) -> {
+			// This is only useful for mobile, but we do the same everywhere to reduce branching.
+			// If it becomes necesarry to branch, the hxd.System.getValue(IsTouch) value can be used.
+			inputElem.focus();
+			inputElem.setSelectionRange(cursorIndex, cursorIndex);
+		};
 	}
 
 	override function sync(ctx) {
-		if (hxd.System.getValue(IsTouch)) {
-			text = inputElem.value;
-			if (js.Browser.document.activeElement == inputElem) {
-				cursorIndex = inputElem.selectionStart;
-			} else {
-				cursorIndex = -1;
-			}
+		// Transfer text from the hidden input field, in case a touch screen is entering text into the input field.
+		text = inputElem.value;
+		if (js.Browser.document.activeElement == inputElem) {
+			cursorIndex = inputElem.selectionStart;
+		} else {
+			cursorIndex = -1;
 		}
+
 		super.sync(ctx);
+	}
+
+	public override function focus() {
+		inputElem.focus();
+		super.focus();
 	}
 }
 

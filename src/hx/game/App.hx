@@ -311,6 +311,7 @@ class App extends hxd.App {
 		final input = new Gui.TextInputWithMobileKeyboardSupport(hxd.res.DefaultFont.get(), flow);
 		input.scale(2);
 		input.inputWidth = Std.int(flow.innerWidth / input.scaleX);
+		input.focus(); // On mobile, this only brings up the keyboard if the user previously clicked on something. It won't open if this is a page load.
 
 		new Gui.Button(flow, "Join", () -> enterName(input.text));
 	}
@@ -428,6 +429,7 @@ class App extends hxd.App {
 		final input = new Gui.TextInputWithMobileKeyboardSupport(hxd.res.DefaultFont.get(), flow);
 		input.scale(2);
 		input.inputWidth = Std.int(flow.innerWidth / input.scaleX);
+		input.focus();
 
 		new Gui.Button(flow, "Done", () -> enterSaboteurWord(input.text));
 	}

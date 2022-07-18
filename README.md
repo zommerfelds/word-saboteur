@@ -3,6 +3,8 @@ A simple multiplayer game
 
 ➡️➡️➡️ Access the live version here: https://word-saboteur.firebaseapp.com/ ⬅️⬅️⬅️
 
+Private planning doc: [link](https://docs.google.com/document/d/1tzyN-0zFsLCdB-iU8C7i5HAIANgV_OETaDwRVNMIV5Q/edit)
+
 ## Development
 
 ### Online IDE

@@ -4,6 +4,8 @@ class TextInputWithMobileKeyboardSupport extends h2d.TextInput {
 	// Hidden input element used for mobile devices to toggle the onscreen keyboard.
 	final inputElem:js.html.InputElement = cast js.Browser.document.getElementById("dummyInput");
 
+	public var onEnter = () -> {};
+
 	public function new(font, parent) {
 		super(font, parent);
 		backgroundColor = 0x80808080;
@@ -11,6 +13,12 @@ class TextInputWithMobileKeyboardSupport extends h2d.TextInput {
 
 		// Clear the text in case a previous value was entered.
 		inputElem.value = "";
+
+		inputElem.onkeydown = (e) -> {
+			if (e.key == "Enter") {
+				onEnter();
+			}
+		};
 
 		onClick = (e) -> {
 			// This is only useful for mobile, but we do the same everywhere to reduce branching.
@@ -24,6 +32,7 @@ class TextInputWithMobileKeyboardSupport extends h2d.TextInput {
 		// Transfer text from the hidden input field, in case a touch screen is entering text into the input field.
 		text = inputElem.value;
 		if (js.Browser.document.activeElement == inputElem) {
+			// TODO: Ctrl-A doesn't work right now, would need to consider the selection end?
 			cursorIndex = inputElem.selectionStart;
 		} else {
 			cursorIndex = -1;

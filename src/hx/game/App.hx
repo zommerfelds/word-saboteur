@@ -323,6 +323,7 @@ class App extends hxd.App {
 		input.scale(2);
 		input.inputWidth = Std.int(flow.innerWidth / input.scaleX);
 		input.focus(); // On mobile, this only brings up the keyboard if the user previously clicked on something. It won't open if this is a page load.
+		input.onEnter = () -> enterName(input.text);
 
 		new Gui.Button(flow, "Join", () -> enterName(input.text));
 	}

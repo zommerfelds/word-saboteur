@@ -378,12 +378,12 @@ class App extends hxd.App {
 		prompt.scale(2);
 
 		final startGameButton = new Gui.Button(flow, "", startGame);
-		startGameButton.enableInteractive = false;
+		startGameButton.interactive.visible = false;
 		new Utils.UpdateFunctionObject(() -> {
 			assertNotNull(currentGameData);
 			assertNotNull(currentGameData.players);
 			final ready = getNumPlayers(currentGameData) >= 3;
-			startGameButton.enableInteractive = ready;
+			startGameButton.interactive.visible = ready;
 			startGameButton.text = ready ? "Start game" : "Need 3 players";
 		}, startGameButton);
 	}

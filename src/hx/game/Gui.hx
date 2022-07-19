@@ -48,6 +48,8 @@ class TextInputWithMobileKeyboardSupport extends h2d.TextInput {
 }
 
 class Button extends h2d.Flow {
+	// To disable the button, use Button.interactive.visible = false.
+
 	// Can't be static because the graphics system won't be ready at initialization.
 	final enabledTile = h2d.Tile.fromColor(0x077777);
 	final disabledTile = h2d.Tile.fromColor(0x676767);

@@ -1,5 +1,7 @@
-# word-saboteur
-A simple multiplayer game
+# Word Saboteur
+A simple multiplayer browser based game with words.
+
+🛠️ Work in progress 🪛
 
 ➡️➡️➡️ Access the live version here: https://word-saboteur.firebaseapp.com/ ⬅️⬅️⬅️
 

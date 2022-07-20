@@ -8,11 +8,12 @@ body {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    font-family: Verdana, sans-serif;
+    font-family: 'Silkscreen', Verdana, sans-serif;
 }
 
 a {
     color: white;
+    font-smooth: never;
 }
 
 .topbar {
@@ -22,7 +23,7 @@ a {
 }
 
 .topbar-item {
-    padding: 0 0.5em 0.1em;
+    padding: 0.25em 0.7em 0;
     display: inline-block;
     height: 100%;
 }
@@ -33,5 +34,10 @@ a {
 
 .topbar a {
     text-decoration: none;
-    font-size: small;
+    font-size: medium;
+}
+
+@font-face {
+    font-family: Silkscreen;
+    src: url('font/slkscr.ttf') format('truetype');
 }

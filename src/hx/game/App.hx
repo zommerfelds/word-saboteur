@@ -371,7 +371,7 @@ class App extends hxd.App {
 		final playerData = currentGameData.players.get(playerId);
 		assertNotNull(playerData);
 
-		prompt.text = 'Welcome ${playerData.name}!\n\nPlayers in the game:';
+		prompt.text = 'Welcome ${playerData.name}!\n\nShare this game using the URL of this page.\n\nPlayers in the game:';
 		for (player in getPlayers(currentGameData)) {
 			prompt.text += "\n- " + player.name;
 		}

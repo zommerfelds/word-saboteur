@@ -152,7 +152,21 @@ class App extends hxd.App {
 		new App();
 	}
 
+	final pak = new hxd.fmt.pak.FileSystem();
+
 	override function init() {
+		// Load resources from PAK file
+		final loader = new hxd.net.BinaryLoader("build/res.pak");
+		loader.onLoaded = (data) -> {
+			pak.addPak(new hxd.fmt.pak.FileSystem.FileInput(data));
+			hxd.Res.loader = new hxd.res.Loader(pak);
+			init2();
+		}
+		loader.load();
+	}
+
+	function init2() {
+		engine.backgroundColor = 0xff1a4758;
 		s2d.addChild(viewRoot);
 
 		final captureAllInputs = new h2d.Flow();
@@ -194,6 +208,8 @@ class App extends hxd.App {
 		} else {
 			startDataUpdateWatcher();
 		}
+
+
 	}
 
 	function startDataUpdateWatcher() {
@@ -253,20 +269,7 @@ class App extends hxd.App {
 		title.text = "Word Saboteur";
 		title.scale(4);
 
-		final button = new h2d.Flow(flow);
-		button.backgroundTile = h2d.Tile.fromColor(0x77777);
-		button.padding = 30;
-		button.verticalAlign = Middle;
-		button.horizontalAlign = Middle;
-		button.paddingBottom += 20;
-		button.enableInteractive = true;
-		button.interactive.onClick = (e) -> {
-			createGame();
-		}
-
-		final buttonText = new h2d.Text(hxd.res.DefaultFont.get(), button);
-		buttonText.text = "New game";
-		buttonText.scale(2);
+		new Gui.Button(flow, "New game", createGame);
 	}
 
 	function createGame() {
@@ -325,7 +328,10 @@ class App extends hxd.App {
 		input.focus(); // On mobile, this only brings up the keyboard if the user previously clicked on something. It won't open if this is a page load.
 		input.onEnter = () -> enterName(input.text);
 
-		new Gui.Button(flow, "Join", () -> enterName(input.text));
+		final joinButton = new Gui.Button(flow, "Join", () -> enterName(input.text));
+		new Utils.UpdateFunctionObject(() -> {
+			joinButton.interactive.visible = (input.text != "");
+		}, joinButton);
 	}
 
 	function enterName(inputFieldValue:String) {
@@ -439,7 +445,6 @@ class App extends hxd.App {
 		choicesFlow.layout = Vertical;
 		for (word in currentGameData.targetWords) {
 			final button = new Gui.Button(choicesFlow, word, () -> {});
-			button.backgroundTile = h2d.Tile.fromColor(0x858585);
 		}
 
 		final prompt = new h2d.Text(hxd.res.DefaultFont.get(), flow);
@@ -500,15 +505,16 @@ class App extends hxd.App {
 			if (isClueGiver && currentGameData.sabotageWordIndex == i) {
 				buttonLabel += " (sabotage)";
 			}
-			final button = new Gui.Button(choicesFlow, buttonLabel, () -> isGuesser && !doneGuessing ? guessWord(i) : null);
-			button.backgroundTile = h2d.Tile.fromColor(0x858585);
+			
+			var color = 0xa0858585;
 			if (currentGameData.guessedWordIndexes.indexOf(i) != -1) {
 				if (currentGameData.sabotageWordIndex == i) {
-					button.backgroundTile = h2d.Tile.fromColor(0x8f4731);
+					color = 0xa08f4731;
 				} else {
-					button.backgroundTile = h2d.Tile.fromColor(0x318f42);
+					color = 0xa0318f42;
 				}
 			}
+			new Gui.Button(choicesFlow, buttonLabel, () -> isGuesser && !doneGuessing ? guessWord(i) : null, color);
 		}
 
 		if (doneGuessing) {

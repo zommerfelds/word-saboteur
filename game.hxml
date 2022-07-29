@@ -12,7 +12,7 @@
 
 -lib heaps:1.9.1
 
-# -D resourcesPath=./res/heaps
+-D resourcesPath=./res/heaps
 
 --macro nullSafety("game")
 

@@ -6,7 +6,7 @@ tasks:
       sudo apt-get install haxe -y
       mkdir ~/haxelib && haxelib setup ~/haxelib
       yes | haxelib install game.hxml
-      watch -x bash -c 'haxe game.hxml |& tail -n4'
+      watch -x bash -c 'haxe --connect 6000 game.hxml |& tail -n4'
   
 # List the ports to expose. Learn more https://www.gitpod.io/docs/config-ports/
 ports:

@@ -53,24 +53,19 @@ class Button extends h2d.Flow {
 
 	public var text(get, set):String;
 
+	public var backgroundColor:Int;
+
 	static final tileCache:Map<Int, h2d.Tile> = [];
 
 	public function new(parent, text, onClick, backgroundColor = 0xa0000000) {
 		super(parent);
+		this.backgroundColor = backgroundColor;
 		padding = 30;
 		verticalAlign = Middle;
 		horizontalAlign = Middle;
 		enableInteractive = true;
 		fillWidth = true;
 		interactive.onClick = (e) -> onClick();
-
-		final cacheEntry = tileCache.get(backgroundColor);
-		if (cacheEntry == null) {
-			backgroundTile = makeTile(backgroundColor);
-			tileCache.set(backgroundColor, backgroundTile);
-		} else {
-			backgroundTile = cacheEntry;
-		}
 
 		borderWidth = 8;
 		borderHeight = 8;
@@ -81,7 +76,12 @@ class Button extends h2d.Flow {
 		paddingBottom += Std.int(buttonText.getBounds().height * 0.3);
 	}
 
-	function makeTile(color) {
+	function makeTile(color):h2d.Tile {
+		final cacheEntry = tileCache.get(color);
+		if (cacheEntry != null) {
+			return cacheEntry;
+		}
+
 		final pixels = hxd.Res.border_01.toBitmap();
 		pixels.lock();
 		for (x in 0...pixels.width) {
@@ -92,7 +92,9 @@ class Button extends h2d.Flow {
 			}
 		}
 		pixels.unlock();
-		return h2d.Tile.fromBitmap(pixels);
+		final tile = h2d.Tile.fromBitmap(pixels);
+		tileCache.set(color, tile);
+		return tile;
 	}
 
 	function get_text() {
@@ -105,6 +107,11 @@ class Button extends h2d.Flow {
 
 	override function sync(ctx:h2d.RenderContext) {
 		alpha = interactive.visible ? 1.0 : 0.5;
+		if (interactive.isOver()) {
+			backgroundTile = makeTile(hxd.Math.colorLerp(backgroundColor, 0xa0ffffff, 0.05));
+		} else {
+			backgroundTile = makeTile(backgroundColor);
+		}
 		super.sync(ctx);
 	}
 }

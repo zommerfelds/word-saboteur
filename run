@@ -5,6 +5,7 @@ set -e
 
 function buildres() {
     haxe -python build/pak.py -lib heaps -main hxd.fmt.pak.Build
+    mkdir -p public/build
     python3 build/pak.py -res res/heaps -out public/build/res
 }
 

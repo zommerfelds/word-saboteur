@@ -10,6 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: |
+          set -x
           sudo apt-get install haxe -y
           mkdir ~/haxelib && haxelib setup ~/haxelib
           yes | haxelib install game.hxml

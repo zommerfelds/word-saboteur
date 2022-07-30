@@ -12,6 +12,7 @@ tasks:
 ports:
   - port: 8000
     onOpen: open-browser
+    visibility: public
   - port: 6000 # Haxe compiler
     onOpen: ignore
 vscode:

@@ -7,7 +7,7 @@
 # We made a fix (https://github.com/okawa-h/js-firebase-extern/issues/1) which is not published yet.
 # -lib js-firebase:0.2.0
 -lib js-firebase:git:https://github.com/okawa-h/js-firebase-extern.git
-
+-lib haxe-strings:7.0.2 
 -lib uuid:2.4.0
 
 -lib heaps:1.9.1

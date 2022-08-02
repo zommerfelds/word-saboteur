@@ -5,6 +5,7 @@ import firebase.firestore.FieldValue;
 import haxe.DynamicAccess;
 import js.html.URLSearchParams;
 import uuid.Uuid;
+using hx.strings.Strings;
 
 using StringTools;
 
@@ -37,6 +38,7 @@ typedef GameData = {
 	version:Int,
 	players:DynamicAccess<Player>,
 	state:GameState,
+	round:Int,
 	saboteurPlayerId:Null<String>,
 	clueGiverPlayerId:Null<String>,
 	targetWords:Array<String>,
@@ -91,16 +93,18 @@ class App extends hxd.App {
 
 		final update:DynamicAccess<Dynamic> = {};
 		update.set(GameDataFields.state, SABOTEUR_ENTERING_WORD);
-		// TODO: pick those properties at random
-		update.set(GameDataFields.saboteurPlayerId, playerId);
-		var otherPlayerId = "";
-		for (somePlayerId in getPlayers(currentGameData).keys()) {
-			if (somePlayerId != playerId) {
-				otherPlayerId = somePlayerId;
-				break;
-			}
-		}
-		update.set(GameDataFields.clueGiverPlayerId, otherPlayerId);
+
+		final players = currentGameData.players.keys().copy();
+		players.sort((a, b) -> a > b ? 1 : -1);
+		final rand = new hxd.Rand(gameUrlParam.hashCode());
+		rand.shuffle(players);
+		final saboteurPos = currentGameData.round;
+		final saboteurId = players[saboteurPos];
+		update.set(GameDataFields.saboteurPlayerId, saboteurId);
+		final clueGiverPos = (currentGameData.round + 1) % players.length;
+		final clueGiverId = players[clueGiverPos];
+		update.set(GameDataFields.clueGiverPlayerId, clueGiverId);
+
 		update.set(GameDataFields.targetWords, [Words.getRandomWord(), Words.getRandomWord()]);
 		update.set(GameDataFields.sabotageWord, null);
 		db.collection("games").doc(gameUrlParam).update(cast update);
@@ -279,6 +283,7 @@ class App extends hxd.App {
 			version: 1,
 			players: {},
 			state: WAITING_ROOM,
+			round: 0,
 			clueGiverPlayerId: null,
 			saboteurPlayerId: null,
 			targetWords: [],
@@ -518,6 +523,7 @@ class App extends hxd.App {
 		}
 
 		if (doneGuessing) {
+			// TODO: increment round
 			new Gui.Button(flow, "Next round", startGame);
 		}
 	}

@@ -1,5 +1,6 @@
 package game;
 
+import js.html.Storage;
 import firebase.Firebase;
 import firebase.firestore.FieldValue;
 import haxe.DynamicAccess;
@@ -66,8 +67,8 @@ class App extends hxd.App {
 		final map:Map<String, Player> = [];
 		final it = gameData.players.keyValueIterator();
 		while (it.hasNext()) {
-			final n = it.next();
 			@:nullSafety(Off)
+			final n = it.next();
 			map.set(n.key, n.value);
 		}
 		return map;
@@ -140,6 +141,8 @@ class App extends hxd.App {
 		db.collection("games").doc(gameUrlParam).update(cast update);
 	}
 
+	@:nullSafety(Off) // TODO: why use local storage if we can use Heaps Save?
+	final localStorage:Storage = js.Browser.getLocalStorage();
 	var app:Null<firebase.app.App> = null;
 	var db:Null<firebase.firestore.Firestore> = null;
 	var gameUrlParam:Null<String> = null;
@@ -201,7 +204,7 @@ class App extends hxd.App {
 		final urlParams = new URLSearchParams(js.Browser.window.location.search);
 		gameUrlParam = urlParams.get("game");
 
-		playerId = js.Browser.getLocalStorage().getItem("playerId");
+		playerId = localStorage.getItem("playerId");
 
 		final tf = new h2d.Text(hxd.res.DefaultFont.get(), viewRoot);
 		tf.text = "Loading...";
@@ -236,7 +239,7 @@ class App extends hxd.App {
 
 			final playerData = gameData.players.get(playerId);
 			if (playerData == null) {
-				js.Browser.getLocalStorage().removeItem("playerId");
+				localStorage.removeItem("playerId");
 				js.Browser.location.reload(/* forceget= */ false);
 				return;
 			}
@@ -351,7 +354,7 @@ class App extends hxd.App {
 
 		playerId = Uuid.nanoId();
 		trace("Setting local storage");
-		js.Browser.getLocalStorage().setItem("playerId", playerId);
+		localStorage.setItem("playerId", playerId);
 
 		final update:DynamicAccess<Player> = {};
 		update.set('players.$playerId', {name: name, score: 0});
